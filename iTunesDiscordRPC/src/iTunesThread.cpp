@@ -97,7 +97,8 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 		/* Wait for iTunes to close */
 		while (WAIT_OBJECT_0 != WaitForSingleObject( g_hITunesClosingEvent, 1 ))
 		{
-			Sleep( 0 );
+			Sleep( 250 );
+
 			if (g_ItunesConnection == nullptr) {
 				break;
 			}
@@ -154,13 +155,15 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 		/* iTunes.exe may take some time to close -- wait for close before continue */
 		while (iTunesProcessFound())
 		{
-			Sleep( 10 );
+			Sleep( 0 );
 		}
 
 		ResetEvent( g_hITunesClosingEvent );
 	}
 }
 
+//--------------------------------------------------
+// Simulate iTunes Event
 VOID InvokeITunesEvent()
 {
 	SetEvent(g_hInvokeEvent);
