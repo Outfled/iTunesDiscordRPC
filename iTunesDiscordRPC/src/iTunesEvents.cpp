@@ -216,7 +216,7 @@ VOID PrepareEventUpdate(IITTrack *Track, BOOL Paused)
 	RPCSTATUS_DATA	Status;
 	LONG			lDuration;
 	BSTR			strValue;
-
+	
 	ZeroMemory(&Status, sizeof(RPCSTATUS_DATA));
 
 	/* App is disabled or paused -- Send empty status to clear RPC */
