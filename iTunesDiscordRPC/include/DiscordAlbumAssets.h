@@ -5,7 +5,7 @@
 #define DEFAULT_DISCORD_APPLICATION_ID      "1095131480147103744"
 #define DEFAULT_DISCORD_APP_IMAGE_KEY       "small - icon"
 
-typedef struct DiscordAppAlbumAssets
+struct DiscordAppAlbumAssets
 {
 	 const char* ApplicationId;
 	 const char* AlbumNames[300];

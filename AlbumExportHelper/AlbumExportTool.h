@@ -10,7 +10,7 @@
 #include <string>
 #include <strsafe.h>
 
-#pragma message("APP_DIR" == APP_DIR)
+#pragma message( "APP_DIR == " APP_DIR)
 
 #define DISCORD_APP_MAX_ASSETS				300
 #define DISCORD_ASSETS_HEADER_FILE_NAME		L"DiscordAlbumAssets.h"
@@ -28,7 +28,7 @@ static const char g_pszAlbumExportFileHeader[] = {
 	"#define DEFAULT_DISCORD_APPLICATION_ID		\"1095131480147103744\"\n"
 	"#define DEFAULT_DISCORD_APP_IMAGE_KEY		 \"small - icon\"\n"
 	"\n"
-	"typedef struct DiscordAppAlbumAssets\n"
+	"struct DiscordAppAlbumAssets\n"
 	"{\n"
 	"	 const char* ApplicationId;\n"
 	"	 const char* AlbumNames[300];\n"
@@ -75,7 +75,7 @@ static inline void GetDiscordAssetsFileName(LPWSTR lpszBuffer, SIZE_T cchBuffer)
 	if (cchNeeded > 0)
 	{
 		lpszSolutionDir = new WCHAR[cchBuffer];
-		if (MultiByteToWideChar(CP_UTF8, 0, APP_DIR, -1, lpszSolutionDir, cchBuffer))
+		if (MultiByteToWideChar(CP_UTF8, 0, APP_DIR, -1, lpszSolutionDir, (int)cchBuffer))
 		{
 			StringCbPrintf(lpszBuffer,
 				cchBuffer * sizeof(WCHAR),
@@ -114,7 +114,8 @@ static inline VOID FreeStringVector(AlbumInfoVector_t &rgAlbumInfoStrings)
 #endif //_AET_FULL_
 
 /* Regex for Discord Application asset names */
-#define DiscordAssetCharacterAllowed(c)		( (c == L'_' || c == L'-') || (c >= 48 && ((c >= 97 && c <= 122 ) || (c <= 57 ) || (c >= 65 && c <= 90))) )
+#define DiscordAssetCharacterAllowed(c)		\
+	( (c == L'_' || c == L'-') || (c >= 48 && ((c >= 97 && c <= 122 ) || (c <= 57 ) || (c >= 65 && c <= 90))) )
 
 /* BSTR to (UTF-8) LPSTR */
 static inline LPSTR SysStringToUTFMultiByte(BSTR pszString)

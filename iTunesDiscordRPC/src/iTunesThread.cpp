@@ -38,7 +38,7 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 	/* Create event for invoking iTunes event */
 	g_hInvokeEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
 
-	// Initialize COM on thread
+	/* Initialize COM for multithreaded use */
 	hResult = CoInitializeEx( NULL, COINITBASE_MULTITHREADED );
 	if (FAILED( hResult ))
 	{
@@ -76,8 +76,6 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 			}
 			else
 			{
-				WCHAR szMessage[100];
-
 				/* Unknown error occurred */
 				TerminateApplication( DlgWnd, L"An unknown error occurred:", Object->hResult );
 			}
@@ -160,6 +158,8 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 
 		ResetEvent( g_hITunesClosingEvent );
 	}
+
+	return 0;
 }
 
 //--------------------------------------------------

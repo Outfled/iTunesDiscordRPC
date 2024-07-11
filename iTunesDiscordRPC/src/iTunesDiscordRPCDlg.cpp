@@ -94,30 +94,41 @@ static VOID AlignDlgControls( CDialogEx *pWnd )
 	pButton->MoveWindow( &CloseBtnRect );
 }
 
+//--------------------------------------------------
+// Dialog Constructor -- Loads the Application Icon
 CiTunesDiscordRPCDlg::CiTunesDiscordRPCDlg(CWnd* pParent) : CDialogEx(IDD_ITUNES_DISCORD_RPC_DIALOG, pParent)
 {
 	m_hIcon	= AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
+//--------------------------------------------------
+// Dialog Data Exchange (DDX) and Dialog Data Validation (DDV) Support
 void CiTunesDiscordRPCDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 }
 
+
+//--------------------------------------------------
+// Dialog Class Message Map
 BEGIN_MESSAGE_MAP( CiTunesDiscordRPCDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
 	ON_WM_CTLCOLOR()
-	ON_BN_CLICKED( IDC_CHECKBOX_STARTUPAPP, &CiTunesDiscordRPCDlg::OnBnClickedCheckboxStartupapp )
+	ON_BN_CLICKED( IDC_CHECKBOX_STARTUPAPP, &CiTunesDiscordRPCDlg::OnBnClickedCheckboxStartupApp)
 	ON_BN_CLICKED( IDC_CHECKBOX_ENABLED, &CiTunesDiscordRPCDlg::OnBnClickedCheckboxEnabled )
-	ON_BN_CLICKED( IDC_CHECKBOX_TRAYENABLED, &CiTunesDiscordRPCDlg::OnBnClickedCheckboxTrayenabled )
+	ON_BN_CLICKED( IDC_CHECKBOX_TRAYENABLED, &CiTunesDiscordRPCDlg::OnBnClickedCheckboxMinimizeToTray)
 	ON_BN_CLICKED( IDC_BUTTON_CLOSE, &CiTunesDiscordRPCDlg::OnBnClickedButtonClose )
 END_MESSAGE_MAP()
 
 
 #pragma warning( push )
 #pragma warning( disable : 6001 ) /* Using uninitialized memory */
+#pragma warning( disable : 6387 ) /* Variable (g_hAppDisabledEvent) could be NULL */
+
+//--------------------------------------------------
+// Called After Dialog Window & All Controls Are Created; Right Before Displaying the Window
 BOOL CiTunesDiscordRPCDlg::OnInitDialog()
 {
 	BOOL	bIsEnabled;
@@ -127,27 +138,13 @@ BOOL CiTunesDiscordRPCDlg::OnInitDialog()
 
 	CDialogEx::OnInitDialog();
 
-	/* Initialize events for threads */
+	//
+	// Initialize global thread events
+	// 
 	g_hITunesClosingEvent	= CreateEvent( NULL, TRUE, FALSE, NULL );
 	g_hAppDisabledEvent		= CreateEvent( NULL, TRUE, FALSE, NULL );
 
-	// IDM_ABOUTBOX must be in the system command range.
-	ASSERT((IDM_ABOUTBOX & 0xFFF0) == IDM_ABOUTBOX);
-	ASSERT(IDM_ABOUTBOX < 0xF000);
-
-	CMenu* pSysMenu = GetSystemMenu(FALSE);
-	if (pSysMenu != nullptr)
-	{
-		BOOL bNameValid;
-		CString strAboutMenu;
-		bNameValid = strAboutMenu.LoadString(IDS_ABOUTBOX);
-		ASSERT(bNameValid);
-		if (!strAboutMenu.IsEmpty())
-		{
-			pSysMenu->AppendMenu(MF_SEPARATOR);
-			pSysMenu->AppendMenu(MF_STRING, IDM_ABOUTBOX, strAboutMenu);
-		}
-	}
+	ASSERT(g_hITunesClosingEvent != NULL && g_hAppDisabledEvent != NULL);
 
 	/* Set the big & small icons */
 	SetIcon(m_hIcon, TRUE);	
@@ -169,8 +166,11 @@ BOOL CiTunesDiscordRPCDlg::OnInitDialog()
 	
 	if (FAILED( lStatus ))
 	{
-		TerminateApplication( this, L"An unknown error occurred", lStatus );
+		TerminateApplication( this, L"An unknown error occurred", (DWORD)lStatus );
 	}
+
+	/* Set/Remove startup application */
+	SetApplicationStartupProgram(bStartupApp);
 
 	//
 	// Set the checkbox values
@@ -187,28 +187,40 @@ BOOL CiTunesDiscordRPCDlg::OnInitDialog()
 
 	InitializeCriticalSection( &g_CritSection );
 
-	/* Start threads */
+	//
+	// Start global threads
+	//
 	g_hITunesThread = CreateThread( NULL, 0, iTunesHandlerThread, this, 0, NULL );
 	g_hTrayThread	= CreateThread( NULL, 0, ApplicationTrayHandler, this, 0, NULL );
 
-	return TRUE;  // return TRUE  unless you set the focus to a control
+	ASSERT(g_hITunesThread != NULL && g_hTrayThread != NULL);
+
+	/* return TRUE since we are not setting the focus to a control */
+	return TRUE;
 }
+
 #pragma warning( pop )
 
+//--------------------------------------------------
+// Called When the User Sends a Command to the Dialog Window, Typically the Close Button
 void CiTunesDiscordRPCDlg::OnSysCommand(UINT nID, LPARAM lParam)
 {
-	/* Window is closing */
-	if ( nID == SC_CLOSE )
+	switch (nID)
 	{
+		//
+		// Window is closing
+		//
+	case SC_CLOSE:
 		this->OnBnClickedButtonClose();
-		return;
-	}
-	else
-	{
+		break;
+	default:
 		CDialogEx::OnSysCommand(nID, lParam);
+		break;
 	}
 }
 
+//--------------------------------------------------
+// Called Whenever the Dialog Window Needs to be Painted
 void CiTunesDiscordRPCDlg::OnPaint()
 {
 	if (IsIconic())
@@ -251,7 +263,8 @@ HBRUSH CiTunesDiscordRPCDlg::OnCtlColor( CDC *pDC, CWnd *pWnd, UINT uCtlColor )
 	return (HBRUSH)GetStockObject( WHITE_BRUSH );
 }
 
-
+//--------------------------------------------------
+// Method Called when the 'Enabled' Checkbox is Modified
 void CiTunesDiscordRPCDlg::OnBnClickedCheckboxEnabled()
 {
 	CButton *pButton = (CButton *)GetDlgItem( IDC_CHECKBOX_ENABLED );
@@ -266,20 +279,13 @@ void CiTunesDiscordRPCDlg::OnBnClickedCheckboxEnabled()
 		SetEvent( g_hAppDisabledEvent );
 	}
 
-	Sleep( 10 );
-
 	/* Send event to iTunes to trigger status display */
-	LONG cVolume;
-	if (g_ItunesConnection && SUCCEEDED(CoInitializeEx( NULL, COINITBASE_MULTITHREADED )))
-	{
-		g_ItunesConnection->get_SoundVolume( &cVolume );
-		g_ItunesConnection->put_SoundVolume( ++cVolume );
-		g_ItunesConnection->put_SoundVolume( --cVolume );
-		CoUninitialize();
-	}
+	InvokeITunesEvent();
 }
 
-void CiTunesDiscordRPCDlg::OnBnClickedCheckboxStartupapp()
+//--------------------------------------------------
+// Method Called when the 'Startup Application' Checkbox is Modified
+void CiTunesDiscordRPCDlg::OnBnClickedCheckboxStartupApp()
 {
 	CButton *pButton = (CButton *)GetDlgItem( IDC_CHECKBOX_STARTUPAPP );
 
@@ -287,7 +293,9 @@ void CiTunesDiscordRPCDlg::OnBnClickedCheckboxStartupapp()
 	SetApplicationStartupProgram( pButton->GetCheck() );
 }
 
-void CiTunesDiscordRPCDlg::OnBnClickedCheckboxTrayenabled()
+//--------------------------------------------------
+// Method Called when the 'Minimize to Tray' Checkbox is Modified
+void CiTunesDiscordRPCDlg::OnBnClickedCheckboxMinimizeToTray()
 {
 	CButton *MinimizeTrayBtn = (CButton *)GetDlgItem( IDC_CHECKBOX_TRAYENABLED );
 	SetApplicationRegValue( APP_REG_VALUE_MINIMIZETRAY, MinimizeTrayBtn->GetCheck() );
@@ -300,6 +308,8 @@ void CiTunesDiscordRPCDlg::OnBnClickedCheckboxTrayenabled()
 	}
 }
 
+//--------------------------------------------------
+// Method Called when the 'Close' Button is Clicked
 void CiTunesDiscordRPCDlg::OnBnClickedButtonClose()
 {
 	CButton *MinimizeTrayBtn = (CButton *)GetDlgItem( IDC_CHECKBOX_TRAYENABLED );

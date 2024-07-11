@@ -18,143 +18,9 @@
 #define EPOCH_DIFFERENCE				11644473600LL
 
 
-static const IID IID_IiTunesEvents = { 0x429dd3c8, 0x703e, 0x4188, { 0x96, 0xe, 0xa9, 0x82, 0x1f, 0x14, 0xb0, 0x4c } };
+static const IID IID_IiTunesEvents = { 0x429DD3C8, 0x703E, 0x4188, { 0x96, 0xE, 0xA9, 0x82, 0x1F, 0x14, 0xB0, 0x4C } };
 
-//--------------------------------------------------
-// Get iTunes Event Update & Prepare Data for RPC Status
-static VOID PrepareEventUpdate( IITTrack *Track, BOOL Paused = FALSE )
-{
-	RPCSTATUS_DATA	Status;
-	HRESULT			hResult;
-	LONG			lStartTime;
-	LONG			lDuration;
-	BSTR			strValue;
-
-	ZeroMemory(&Status, sizeof(RPCSTATUS_DATA));
-	
-	/* App is disabled or paused -- Send empty status to clear RPC */
-	if (WAIT_OBJECT_0 == WaitForSingleObject( g_hAppDisabledEvent, 0 ) || Paused) 
-	{
-		UpdateDiscordStatus( NULL );
-		Track->Release();
-
-		return;
-	}
-
-	//-------------------------
-	// Song name
-	if (SUCCEEDED( Track->get_Name( &strValue ) ))
-	{
-		if ( wcslen( strValue ) == 1 )
-		{
-			WCHAR szBuf[3];
-			StringCbPrintf( szBuf, sizeof( szBuf ), L" %c", *strValue );
-			Status.SongName = SysAllocString( szBuf );
-		}
-		else {
-			Status.SongName = SysAllocString( strValue );
-		}
-		SysFreeString( strValue );
-	}
-
-	//-------------------------
-	// Artist
-	if (SUCCEEDED( Track->get_Artist( &strValue ) ))
-	{
-		Status.Artist = SysAllocString( strValue );
-		SysFreeString( strValue );
-	}
-
-	//-------------------------
-	// Album name / Album asset name
-	if (SUCCEEDED( Track->get_Album( &strValue ) ))
-	{
-		Status.AlbumName = SysAllocString(strValue);
-
-		//
-		// Convert album name to the Discord Application asset name
-		//
-		WCHAR szAssetNameBuffer[MAX_PATH]{};
-		for (SIZE_T nOriginal = 0, nBuffer = 0; nOriginal < wcslen(strValue) && nBuffer < MAX_PATH; ++nOriginal, ++nBuffer)
-		{
-			CHAR chCurrent = strValue[nOriginal];
-
-			/* Check if character is not allowed */
-			if (!DiscordAssetCharacterAllowed(chCurrent))
-			{
-				/* Invalid characters are replaced with underscores when uploading discord assets */
-				szAssetNameBuffer[nBuffer] = L'_';
-
-				/* Add extra underscore if the current character is a colon & the next character is space */
-				if (chCurrent == ':' && strValue[nOriginal + 1] == ' ')
-				{
-					if (nBuffer + 1 < MAX_PATH) {
-						szAssetNameBuffer[++nBuffer] = L'_';
-					}
-				}
-
-				/* Continue loop if the current & next character is a space */
-				else if (chCurrent == ' ' && strValue[nOriginal + 1] == ' ') {
-					continue;
-				}
-
-				/* Go to the next valid character in the album name */
-				++nOriginal;
-				while (!DiscordAssetCharacterAllowed(strValue[nOriginal]))
-				{
-					if (++nOriginal >= wcslen(strValue)) {
-						break;
-					}
-				}
-
-				--nOriginal;
-				continue;
-			}
-
-			//
-			// The current character is allowed
-			// Discord automatically sets all asset name characters to lowercase when uploading
-			//
-			szAssetNameBuffer[nBuffer] = towlower(strValue[nOriginal]);
-		}
-
-		SysFreeString( strValue );
-		Status.AlbumAssetName = SysAllocString(szAssetNameBuffer);
-	}
-
-	//-------------------------
-	// Song duration & player position
-	if (SUCCEEDED( Track->get_Duration( &lDuration ) ))
-	{
-		FILETIME		FileTime;
-		LARGE_INTEGER	lTime;
-		SYSTEMTIME		sysTime;
-		LONG			nPosition;
-
-		//GetSystemTimeAsFileTime( &FileTime );
-		/* Set status time as Unix Epoch */
-		//lTime.LowPart = FileTime.dwLowDateTime;
-		//lTime.HighPart = FileTime.dwHighDateTime;
-		//Status.Time = (lTime.QuadPart - EPOCH_DIFFERENCE) / WINDOWS_TICK;
-
-		/* Get song position in Unix Epoch time */
-		if (g_ItunesConnection && SUCCEEDED(g_ItunesConnection->get_PlayerPosition(&nPosition)))
-		{
-			Status.Time = time_t(time(0) - nPosition);
-		}
-	}
-
-	/* Send discord status */
-	UpdateDiscordStatus( &Status );
-
-	//
-	// Cleanup
-	//
-	SAFE_STR_FREE( Status.SongName );
-	SAFE_STR_FREE( Status.Artist );
-	SAFE_STR_FREE( Status.AlbumName );
-	SAFE_STR_FREE( Status.AlbumAssetName );
-}
+static VOID PrepareEventUpdate(IITTrack * Track, BOOL Paused = FALSE);
 
 
 //--------------------------------------------------
@@ -341,4 +207,129 @@ VOID CiTunesEvents::OnSoundVolumeChangedEvent( LONG NewVolume )
 			PrepareEventUpdate( Track, (State == ITPlayerStateStopped) ? TRUE : FALSE );
 		}
 	}
+}
+
+//--------------------------------------------------
+// Get iTunes Event Update & Prepare Data for RPC Status
+VOID PrepareEventUpdate(IITTrack *Track, BOOL Paused)
+{
+	RPCSTATUS_DATA	Status;
+	LONG			lDuration;
+	BSTR			strValue;
+
+	ZeroMemory(&Status, sizeof(RPCSTATUS_DATA));
+
+	/* App is disabled or paused -- Send empty status to clear RPC */
+	if (WAIT_OBJECT_0 == WaitForSingleObject(g_hAppDisabledEvent, 0) || Paused)
+	{
+		UpdateDiscordStatus(NULL);
+		Track->Release();
+
+		return;
+	}
+
+	//-------------------------
+	// Song name
+	if (SUCCEEDED(Track->get_Name(&strValue)))
+	{
+		if (wcslen(strValue) == 1)
+		{
+			WCHAR szBuf[3];
+			StringCbPrintf(szBuf, sizeof(szBuf), L" %c", *strValue);
+
+			Status.SongName = SysAllocString(szBuf);
+		}
+		else {
+			Status.SongName = SysAllocString(strValue);
+		}
+		SysFreeString(strValue);
+	}
+
+	//-------------------------
+	// Artist
+	if (SUCCEEDED(Track->get_Artist(&strValue)))
+	{
+		Status.Artist = SysAllocString(strValue);
+		SysFreeString(strValue);
+	}
+
+	//-------------------------
+	// Album name / Album asset name
+	if (SUCCEEDED(Track->get_Album(&strValue)))
+	{
+		Status.AlbumName = SysAllocString(strValue);
+
+		//
+		// Convert album name to the Discord Application asset name
+		//
+		WCHAR szAssetNameBuffer[MAX_PATH]{};
+		for (SIZE_T nOriginal = 0, nBuffer = 0; nOriginal < wcslen(strValue) && nBuffer < MAX_PATH; ++nOriginal, ++nBuffer)
+		{
+			WCHAR chCurrent = strValue[nOriginal];
+
+			/* Check if character is not allowed */
+			if (!DiscordAssetCharacterAllowed(chCurrent))
+			{
+				/* Invalid characters are replaced with underscores when uploading discord assets */
+				szAssetNameBuffer[nBuffer] = L'_';
+
+				/* Add extra underscore if the current character is a colon & the next character is space */
+				if (chCurrent == ':' && strValue[nOriginal + 1] == ' ')
+				{
+					if (nBuffer + 1 < MAX_PATH) {
+						szAssetNameBuffer[++nBuffer] = L'_';
+					}
+				}
+
+				/* Continue loop if the current & next character is a space */
+				else if (chCurrent == ' ' && strValue[nOriginal + 1] == ' ') {
+					continue;
+				}
+
+				/* Go to the next valid character in the album name */
+				++nOriginal;
+				while (!DiscordAssetCharacterAllowed(strValue[nOriginal]))
+				{
+					if (++nOriginal >= wcslen(strValue)) {
+						break;
+					}
+				}
+
+				--nOriginal;
+				continue;
+			}
+
+			//
+			// The current character is allowed
+			// Discord automatically sets all asset name characters to lowercase when uploading
+			//
+			szAssetNameBuffer[nBuffer] = towlower(strValue[nOriginal]);
+		}
+
+		SysFreeString(strValue);
+		Status.AlbumAssetName = SysAllocString(szAssetNameBuffer);
+	}
+
+	//-------------------------
+	// Song duration & player position
+	if (SUCCEEDED(Track->get_Duration(&lDuration)))
+	{
+		/* Get song position in Unix Epoch time */
+		LONG nPosition;
+		if (g_ItunesConnection && SUCCEEDED(g_ItunesConnection->get_PlayerPosition(&nPosition)))
+		{
+			Status.Time = time_t(time(0) - nPosition);
+		}
+	}
+
+	/* Send discord status */
+	UpdateDiscordStatus(&Status);
+
+	//
+	// Cleanup
+	//
+	SAFE_STR_FREE(Status.SongName);
+	SAFE_STR_FREE(Status.Artist);
+	SAFE_STR_FREE(Status.AlbumName);
+	SAFE_STR_FREE(Status.AlbumAssetName);
 }

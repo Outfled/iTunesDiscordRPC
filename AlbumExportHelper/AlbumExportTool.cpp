@@ -36,7 +36,7 @@
 }
 
 
-typedef struct DiscordAlbumAssetFileData
+struct DiscordAlbumAssetFileData
 {
     LPSTR               HeaderFileData;
     LONGLONG            FileLength;
@@ -69,6 +69,7 @@ static BOOL             AddAlbumsToNewApplication(
     DWORD *,
     DiscordAlbumAssetFileData *
 );
+
 
 int main()
 { 
@@ -211,10 +212,10 @@ int AETCreateAssetData()
         nAppIds = 1;
     }
     else if (rgLibraryAlbums.size() % DISCORD_APP_MAX_ASSETS == 0) {
-        nAppIds = rgLibraryAlbums.size() / DISCORD_APP_MAX_ASSETS;
+        nAppIds = (int)rgLibraryAlbums.size() / DISCORD_APP_MAX_ASSETS;
     }
     else {
-        nAppIds = (rgLibraryAlbums.size() / DISCORD_APP_MAX_ASSETS) + 1;
+        nAppIds = (int)(rgLibraryAlbums.size() / DISCORD_APP_MAX_ASSETS) + 1;
     }
 
     rgApplicationIds = RetrieveUserDiscordAppIds(nAppIds);
@@ -291,7 +292,7 @@ int AETUpdateAssetData()
         return 1;
     }
 
-    nCurrentApplications = AlbumAssetData.DiscordApplicationIds.size();
+    nCurrentApplications = (int)AlbumAssetData.DiscordApplicationIds.size();
     if (!nCurrentApplications || !AlbumAssetData.ApplicationAssets)
     {
         printf("Error: No Discord Applications were found in the DiscordAlbumAssets.h header file\n");
@@ -362,7 +363,7 @@ int AETUpdateAssetData()
         }
         pITunes->Release();
 
-        printf("[Error]: Failed to retrieve albums in the user library (%ls)\n", _com_error(hResult));
+        printf("[Error]: Failed to retrieve albums in the user library (%ls)\n", _com_error(hResult).ErrorMessage());
         CoUninitialize();
 
         getchar();
@@ -404,7 +405,7 @@ int AETUpdateAssetData()
 
     if (rgErasePositions.size())
     {
-        for (int i = rgErasePositions.size() - 1; i >= 0; --i)
+        for (int i = (int)rgErasePositions.size() - 1; i >= 0; --i)
         {
             delete[] std::get<1>(rgUpdatedAlbumData[rgErasePositions[i]]);
             rgUpdatedAlbumData.erase(rgUpdatedAlbumData.begin() + rgErasePositions[i]);
@@ -432,13 +433,13 @@ int AETUpdateAssetData()
         MBStringVector_t    rgCreatedAppIds;
 
         nRequiredNewApplications    = 0;
-        nAlbumAssetsNeeded          = rgUpdatedAlbumData.size();
+        nAlbumAssetsNeeded          = (int)rgUpdatedAlbumData.size();
         GetDiscordAssetsFileName(szAlbumAssetsFile, sizeof(szAlbumAssetsFile));
 
         //
         // Determine how many new Discord Applciations are needed
         //
-        nAlbumAssetsNeeded -= (DISCORD_APP_MAX_ASSETS - AlbumAssetData.ApplicationAssets[nCurrentApplications - 1].size());
+        nAlbumAssetsNeeded -= (int)(DISCORD_APP_MAX_ASSETS - AlbumAssetData.ApplicationAssets[nCurrentApplications - 1].size());
         if (nAlbumAssetsNeeded <= 0) {
             nRequiredNewApplications = 0;
         }
@@ -548,7 +549,7 @@ int AETUpdateAssetData()
         FreeStringVector(rgUpdatedAlbumData);
 
         /* Write the updated DiscordAlbumAssets.h buffer to the temp file */
-        bSuccess = WriteFile(hHeaderFile, AlbumAssetData.HeaderFileData, strlen(AlbumAssetData.HeaderFileData), NULL, NULL);
+        bSuccess = WriteFile(hHeaderFile, AlbumAssetData.HeaderFileData, (DWORD)strlen(AlbumAssetData.HeaderFileData), NULL, NULL);
         if (!bSuccess)
         {
             printf("Error: Failed to write data to TempDiscordAlbumAssets.h file (%ls)\n",
@@ -603,6 +604,7 @@ int AETUpdateAssetData()
 
 #pragma warning( push )
 #pragma warning( disable : 6386 ) /* Potential buffer overrun */
+
 //--------------------------------------------------
 // Validate Any Quotation Marks in Album Name String (Used for rewriting DiscordAlbumAssets.h) 
 static inline LPSTR FixQuotesInAlbumName(LPCSTR lpszAlbumName)
@@ -633,6 +635,7 @@ static inline LPSTR FixQuotesInAlbumName(LPCSTR lpszAlbumName)
 
     return lpszFixedName;
 }
+
 #pragma warning( pop )
 
 //--------------------------------------------------
@@ -792,7 +795,7 @@ HRESULT ExportDiscordAppsAlbumAssets(
     //
     // Export the album images & rite the data to the export file
     //
-    bSuccess = WriteFile(hExportFile, g_pszAlbumExportFileHeader, strlen(g_pszAlbumExportFileHeader), NULL, NULL);
+    bSuccess = WriteFile(hExportFile, g_pszAlbumExportFileHeader, (DWORD)strlen(g_pszAlbumExportFileHeader), NULL, NULL);
     if (bSuccess)
     {
         StringCbPrintfA(szBuffer,
@@ -800,7 +803,7 @@ HRESULT ExportDiscordAppsAlbumAssets(
             "const DiscordAppAlbumAssets g_DiscordAppsAlbums[%d] = {\n",
             (ULONG)DiscordApplicationIds.size()
         );
-        bSuccess = WriteFile(hExportFile, szBuffer, strlen(szBuffer), NULL, NULL);
+        bSuccess = WriteFile(hExportFile, szBuffer, (DWORD)strlen(szBuffer), NULL, NULL);
     }
 
     for (size_t nApplication = 0, nAlbum = 0; bSuccess && nApplication < DiscordApplicationIds.size(); ++nApplication)
@@ -856,10 +859,11 @@ HRESULT ExportDiscordAppsAlbumAssets(
             "    { \"%s\", {\n",
             DiscordApplicationIds[nApplication]
         );
-        bSuccess = WriteFile(hExportFile, szBuffer, strlen(szBuffer), NULL, NULL);
+        bSuccess = WriteFile(hExportFile, szBuffer, (DWORD)strlen(szBuffer), NULL, NULL);
 
         /* Enumerate the next album group */
-        for (int nIndex = 0, nStartCount = nAlbum; bSuccess && nAlbum - nStartCount < DISCORD_APP_MAX_ASSETS && nAlbum < rgAlbumNames.size(); ++nIndex)
+        for (int nIndex = 0, nStartCount = (int)nAlbum; bSuccess && nAlbum - nStartCount < DISCORD_APP_MAX_ASSETS &&
+            nAlbum < rgAlbumNames.size(); ++nIndex)
         {
             IITTrack                *pSong;
             IITArtworkCollection    *pAlbumImageCollection;
@@ -911,8 +915,8 @@ HRESULT ExportDiscordAppsAlbumAssets(
             //
             // Export the album image to file
             //
-            DWORD cchExportPath = wcslen(lpszWideAppDirectory) + wcslen(L"\\") + wcslen(pszValidAlbumName) +
-                wcslen(L".jpeg") + 1;
+            DWORD cchExportPath = (DWORD)(wcslen(lpszWideAppDirectory) + wcslen(L"\\") + wcslen(pszValidAlbumName) +
+                wcslen(L".jpeg") + 1);
 
             pszExportImagePath = SysAllocStringLen(NULL, cchExportPath);
             StringCchPrintf(pszExportImagePath,
@@ -936,29 +940,29 @@ HRESULT ExportDiscordAppsAlbumAssets(
             //
             // Update the header file
             //
-            bSuccess = WriteFile(hExportFile, "        \"", strlen("        \""), NULL, NULL);
+            bSuccess = WriteFile(hExportFile, "        \"", (DWORD)strlen("        \""), NULL, NULL);
             if (bSuccess)
             {
                 if (strstr(lpszCurrentAlbumName, "\""))
                 {
                     LPSTR lpszFixedName = FixQuotesInAlbumName(lpszCurrentAlbumName);
-                    bSuccess = WriteFile(hExportFile, lpszFixedName, strlen(lpszFixedName), NULL, NULL);
+                    bSuccess = WriteFile(hExportFile, lpszFixedName, (DWORD)strlen(lpszFixedName), NULL, NULL);
 
                     rgCurrentAppAlbums.push_back(lpszFixedName);
                 }
                 else
                 {
-                    bSuccess = WriteFile(hExportFile, lpszCurrentAlbumName, strlen(lpszCurrentAlbumName), NULL, NULL);
+                    bSuccess = WriteFile(hExportFile, lpszCurrentAlbumName, (DWORD)strlen(lpszCurrentAlbumName), NULL, NULL);
                     rgCurrentAppAlbums.push_back(lpszCurrentAlbumName);
                 }
             }
             if (bSuccess)
             {
                 if (nAlbum - nStartCount + 1 < DISCORD_APP_MAX_ASSETS && nIndex + 1 + nStartCount < rgAlbumNames.size()) {
-                    bSuccess = WriteFile(hExportFile, "\",\n", strlen("\",\n"), NULL, NULL);
+                    bSuccess = WriteFile(hExportFile, "\",\n", (DWORD)strlen("\",\n"), NULL, NULL);
                 }
                 else {
-                    bSuccess = WriteFile(hExportFile, "\"\n", strlen("\"\n"), NULL, NULL);
+                    bSuccess = WriteFile(hExportFile, "\"\n", (DWORD)strlen("\"\n"), NULL, NULL);
                 }
             }
 
@@ -972,18 +976,18 @@ HRESULT ExportDiscordAppsAlbumAssets(
         {
             if (nApplication + 1 == DiscordApplicationIds.size())
             {
-                bSuccess = WriteFile(hExportFile, "    } }\n", strlen("    } }\n"), NULL, NULL);
+                bSuccess = WriteFile(hExportFile, "    } }\n", (DWORD)strlen("    } }\n"), NULL, NULL);
             }
             else
             {
-                bSuccess = WriteFile(hExportFile, "    } },\n", strlen("    } },\n"), NULL, NULL);
+                bSuccess = WriteFile(hExportFile, "    } },\n", (DWORD)strlen("    } },\n"), NULL, NULL);
             }
         }
     }
 
     /* Finalize header file */
     if (bSuccess) {
-        bSuccess = WriteFile(hExportFile, "};\n", strlen("};\n"), NULL, NULL);
+        bSuccess = WriteFile(hExportFile, "};\n", (DWORD)strlen("};\n"), NULL, NULL);
     }
 
     if (!bSuccess)
@@ -1045,7 +1049,7 @@ BOOL ReadDiscordAlbumAssetFile(DiscordAlbumAssetFileData *pFileData)
     // Read the file data
     // 
     bSuccess = GetFileSizeEx(hHeaderFile, &liFileSize);
-    if (!bSuccess || liFileSize.QuadPart <= strlen(g_pszAlbumExportFileHeader))
+    if (!bSuccess || liFileSize.QuadPart <= (LONGLONG)strlen(g_pszAlbumExportFileHeader))
     {
         if (!bSuccess)
         {
@@ -1064,7 +1068,7 @@ BOOL ReadDiscordAlbumAssetFile(DiscordAlbumAssetFileData *pFileData)
     }
 
     pFileData->HeaderFileData = new CHAR[liFileSize.QuadPart + 1];
-    if (!ReadFile(hHeaderFile, pFileData->HeaderFileData, liFileSize.QuadPart, NULL, NULL))
+    if (!ReadFile(hHeaderFile, pFileData->HeaderFileData, (DWORD)liFileSize.QuadPart, NULL, NULL))
     {
         printf("[Error]: Failed to read %ls file (%ls)\n",
             DISCORD_ASSETS_HEADER_FILE_NAME,
@@ -1227,9 +1231,9 @@ BOOL AddAlbumsToExistingApplication(DiscordAlbumAssetFileData &AssetData, AlbumI
     lpszEndingBuffer    = strstr(AssetData.HeaderFileData, rgRecentApplication[rgRecentApplication.size() - 1]);
     lpszEndingBuffer    += strlen(rgRecentApplication[rgRecentApplication.size() - 1]);
     lpszEndingBuffer    += strlen("\"");
-    nAppendStartingPos  = strlen(AssetData.HeaderFileData) - strlen(lpszEndingBuffer);
+    nAppendStartingPos  = (int)(strlen(AssetData.HeaderFileData) - strlen(lpszEndingBuffer));
 
-    for (int i = rgRecentApplication.size(), k = 0; i < DISCORD_APP_MAX_ASSETS && k < AlbumData.size(); ++i, ++k)
+    for (size_t i = rgRecentApplication.size(), k = 0; i < DISCORD_APP_MAX_ASSETS && k < AlbumData.size(); ++i, ++k)
     {     
         if (i == rgRecentApplication.size())
         {
@@ -1248,13 +1252,13 @@ BOOL AddAlbumsToExistingApplication(DiscordAlbumAssetFileData &AssetData, AlbumI
         }   
     }
 
-    if (cchNewFileLength > AssetData.FileLength)
+    if (cchNewFileLength > (SIZE_T)AssetData.FileLength)
     {
         LPSTR lpszUpdatedFile = new CHAR[cchNewFileLength];
         CopyMemory(lpszUpdatedFile, AssetData.HeaderFileData, nAppendStartingPos);
 
         LPSTR pUpdateBuffer = lpszUpdatedFile + nAppendStartingPos;
-        for (int i = rgRecentApplication.size(), k = 0; i < DISCORD_APP_MAX_ASSETS && k < AlbumData.size(); ++i, ++k)
+        for (size_t i = rgRecentApplication.size(), k = 0; i < DISCORD_APP_MAX_ASSETS && k < AlbumData.size(); ++i, ++k)
         {
             if (i == rgRecentApplication.size())
             {
@@ -1291,6 +1295,9 @@ BOOL AddAlbumsToExistingApplication(DiscordAlbumAssetFileData &AssetData, AlbumI
     return FALSE;
 }
 
+#pragma warning( push )
+#pragma warning( disable : 6387 ) /* Variable (lpszRest) could be NULL */
+
 //--------------------------------------------------
 // Assign Album Assets to the a New Discord Application
 BOOL AddAlbumsToNewApplication(
@@ -1303,7 +1310,6 @@ BOOL AddAlbumsToNewApplication(
     DiscordAlbumAssetFileData   *pAlbumAssetFile
 )
 {
-    LPSTR               lpsz;
     BOOL                bSuccess;
     CHAR                szCurrentDirectory[MAX_PATH];
     CHAR                szBuffer[MAX_PATH];
@@ -1416,8 +1422,8 @@ BOOL AddAlbumsToNewApplication(
         //
         // Export the album image to file
         //
-        DWORD cchExportPath = wcslen(lpszWideAppDirectory) + wcslen(L"\\") + wcslen(pszValidAlbumName) +
-            wcslen(L".jpeg") + 1;
+        DWORD cchExportPath = (DWORD)(wcslen(lpszWideAppDirectory) + wcslen(L"\\") + wcslen(pszValidAlbumName) +
+            wcslen(L".jpeg") + 1);
 
         pszExportImagePath = SysAllocStringLen(NULL, cchExportPath);
         StringCchPrintf(pszExportImagePath,
@@ -1496,7 +1502,7 @@ BOOL AddAlbumsToNewApplication(
     if (ppbFileBuffer)
     {
         *ppbFileBuffer = new BYTE[szHeaderFileBuf.length() + 1];
-        *pcbFileBuffer = szHeaderFileBuf.length() + 1;
+        *pcbFileBuffer = (DWORD)szHeaderFileBuf.length() + 1;
 
         CopyMemory(*ppbFileBuffer, szHeaderFileBuf.c_str(), szHeaderFileBuf.length() + 1);
         return TRUE;
@@ -1584,6 +1590,8 @@ BOOL AddAlbumsToNewApplication(
 
     return FALSE;
 }
+
+#pragma warning( pop )
 
 static inline LPSTR DuplicateString(LPCSTR lpszString)
 {

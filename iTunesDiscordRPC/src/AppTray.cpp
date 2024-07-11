@@ -42,7 +42,6 @@ DWORD WINAPI ApplicationTrayHandler( LPVOID lpvParam )
 {
 	BOOL	bResult;
 	MSG		MsgWnd;
-	BOOL	bPreviousValue;
 
 	g_AppWnd	= (CWnd *)lpvParam;
 	g_Instance	= GetModuleHandle( NULL );
