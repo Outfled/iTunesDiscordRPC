@@ -361,3 +361,5 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/iTunesDiscordRPC/include/Discord/RPC2.h
+/iTunesDiscordRPC/include/Discord/Register2.h
