@@ -2,7 +2,7 @@
 #include "include/AppReg.h"
 
 #define HKEY_BASE_PATH		L"SOFTWARE\\Outfled"
-#define HKEY_BASE_NAME		L"iTunes Discord RPC"
+#define HKEY_BASE_NAME		L"iTunesDiscordRPC"
 #define HKEY_STARUP_PATH	L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
 #define HKEY_STARTUP_VALUE	HKEY_BASE_NAME
 

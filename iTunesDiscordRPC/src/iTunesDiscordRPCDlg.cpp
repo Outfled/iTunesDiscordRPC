@@ -98,7 +98,7 @@ static VOID AlignDlgControls( CDialogEx *pWnd )
 // Dialog Constructor -- Loads the Application Icon
 CiTunesDiscordRPCDlg::CiTunesDiscordRPCDlg(CWnd* pParent) : CDialogEx(IDD_ITUNES_DISCORD_RPC_DIALOG, pParent)
 {
-	m_hIcon	= AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
 
 //--------------------------------------------------
@@ -152,6 +152,13 @@ BOOL CiTunesDiscordRPCDlg::OnInitDialog()
 	
 	/* Align the controls */
 	AlignDlgControls( this );
+
+	/* Ensure no duplicate applications running */
+	DWORD dwProcId = FindProcessByExeName(L"iTunesDiscordRPC.exe");
+	if (dwProcId && GetCurrentProcessId() != dwProcId)
+	{
+		TerminateApplication(this, L"iTunesDiscordRPC is already running", 0);
+	}
 
 	//
 	// Get the previous checkbox values from registry

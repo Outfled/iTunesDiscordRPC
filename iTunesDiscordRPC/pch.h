@@ -5,5 +5,6 @@
 #include <strsafe.h>
 
 #include "common.h"
+#include "include/thread_help.h"
 
 #endif //PCH_H

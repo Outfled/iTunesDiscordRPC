@@ -11,11 +11,11 @@
 
 #pragma comment( lib, "Pathcch.lib" )
 
+//#define WINDOWS_TICK					10000000
+//#define EPOCH_DIFFERENCE				11644473600LL
 
 #define CopyString(Source, Dest)		( CopyMemory(Dest, Source, (wcslen(Source) + 1) * sizeof(wchar_t)))
 #define SAFE_STR_FREE(str)				if (str != NULL) SysFreeString(str); (str) = NULL;
-#define WINDOWS_TICK					10000000
-#define EPOCH_DIFFERENCE				11644473600LL
 
 
 static const IID IID_IiTunesEvents = { 0x429DD3C8, 0x703E, 0x4188, { 0x96, 0xE, 0xA9, 0x82, 0x1F, 0x14, 0xB0, 0x4C } };

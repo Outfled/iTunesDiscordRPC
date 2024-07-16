@@ -1,0 +1,1 @@
+DWORD FindProcessByExeName(LPCWSTR lpszProcessExe);

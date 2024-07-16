@@ -57,6 +57,12 @@
     <ClInclude Include="include\DiscordAlbumAssets.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\thread_help.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="iTunesDiscordRPC.cpp">
@@ -83,6 +89,9 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\thread_help.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="iTunesDiscordRPC.rc">
@@ -90,13 +99,31 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\iTunesDiscordRPC.rc">
-      <Filter>Resource Files</Filter>
-    </None>
     <None Include="iTunesDiscordRPC.aps" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\iTunesDiscordRPC.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\Outfled\Documents\Photoshop\iTunesDiscordRPC.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\Outfled\Downloads\iTunesDiscordRPC.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\iTunesDiscordRPC (1).ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="img\16x16.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="img\24x24.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="img\AppIcon.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\AppIcon.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

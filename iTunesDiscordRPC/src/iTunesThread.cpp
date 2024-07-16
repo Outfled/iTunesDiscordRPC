@@ -5,8 +5,6 @@
 #include "include/DiscordStatus.h"
 #include "include/AppTray.h"
 
-#include <TlHelp32.h>
-
 #define ITUNES_EXE_NAME		L"iTunes.exe"
 #define ADMIN_REQUIRED(hr)	(hr == HRESULT_FROM_WIN32(ERROR_ELEVATION_REQUIRED))
 
@@ -18,11 +16,41 @@
 //---------------------------------------------------------------------------
 IiTunes			*g_ItunesConnection;
 HANDLE			g_hITunesClosingEvent;
+static HANDLE	g_hITunesConnected;
 static HANDLE	g_hInvokeEvent;
 
+static DWORD WINAPI iTunesEventInvokerThread(LPVOID lpParam)
+{
+	/* Create event for invoking iTunes event */
+	g_hInvokeEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	ATLASSERT(g_hInvokeEvent != NULL);
 
-static BOOL iTunesProcessFound();
+	Sleep(5);
 
+	while (1)
+	{
+		while (WAIT_OBJECT_0 != WaitForSingleObject(g_hITunesConnected, 500))
+		{
+			Sleep(25);
+		}
+
+		/* Cause an immediate event by lowering the volume by 1 and then revert back to original */
+		if (WaitForSingleObject(g_hInvokeEvent, 500) == WAIT_OBJECT_0)
+		{
+			LONG lVolume;
+
+			g_ItunesConnection->get_SoundVolume(&lVolume);
+			g_ItunesConnection->put_SoundVolume(++lVolume);
+
+			Sleep(5);
+			g_ItunesConnection->put_SoundVolume(--lVolume);
+		}
+
+		Sleep(25);
+	}
+
+
+}
 
 //--------------------------------------------------
 // Main Thread for Connecting to iTunes Application
@@ -31,12 +59,15 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 	CWnd			*DlgWnd;
 	HRESULT			hResult;
 	CiTunesObject	*Object;
+	HANDLE			hThread;
 
-	DlgWnd	= (CWnd *)Parameter;
-	hResult = S_OK;
+	DlgWnd				= (CWnd *)Parameter;
+	hResult				= S_OK;
+	g_hITunesConnected	= CreateEvent(NULL, TRUE, FALSE, NULL);
+	hThread				= CreateThread(NULL, 0, iTunesEventInvokerThread, NULL, 0, NULL);
 
-	/* Create event for invoking iTunes event */
-	g_hInvokeEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+	ATLASSERT(g_hITunesConnected != NULL && hThread != NULL);
+	Sleep(0);
 
 	/* Initialize COM for multithreaded use */
 	hResult = CoInitializeEx( NULL, COINITBASE_MULTITHREADED );
@@ -54,12 +85,12 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 		g_ItunesConnection	= NULL;
 
 		/* Wait for iTunes to Open */
-		while (FALSE == iTunesProcessFound())
+		while (0 == FindProcessByExeName(ITUNES_EXE_NAME))
 		{
-			Sleep( 100 );
+			Sleep( 750 );
 		}
 
-		Sleep( 1000 );
+		Sleep(100);
 
 		/* Connect to iTunes */
 		g_ItunesConnection = Object->GetConnection();
@@ -83,21 +114,21 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 			ExitProcess( Object->hResult );
 		}
 
-		/* Cause an immediate event by lowering the volume by 1 and then revert back to original */
-		g_ItunesConnection->get_PlayerState( &iState );
-		if (iState == ITPlayerStatePlaying)
-		{
-			g_ItunesConnection->get_SoundVolume( &cVolume );
-			g_ItunesConnection->put_SoundVolume( ++cVolume );
-			g_ItunesConnection->put_SoundVolume( --cVolume );
-		}
+		SetEvent(g_hITunesConnected);
+
+		//
+		// Invoking an iTunes event will send the current status to Discord, if a song is playing & if the app is enabled
+		// If the app is disabled or iTunes is not playing a song, nothing will be sent to Discord
+		//
+		InvokeITunesEvent();
 
 		/* Wait for iTunes to close */
 		while (WAIT_OBJECT_0 != WaitForSingleObject( g_hITunesClosingEvent, 1 ))
 		{
 			Sleep( 250 );
 
-			if (g_ItunesConnection == nullptr) {
+			if (g_ItunesConnection == nullptr)
+			{
 				break;
 			}
 
@@ -121,29 +152,24 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 					LeaveCriticalSection( &g_CritSection);
 				}
 			}
-
-			/* Cause an immediate event by lowering the volume by 1 and then revert back to original */
-			if (WaitForSingleObject(g_hInvokeEvent, 0) == WAIT_OBJECT_0)
-			{
-				LONG lVolume;
-
-				g_ItunesConnection->get_SoundVolume(&lVolume);
-				g_ItunesConnection->put_SoundVolume(++lVolume);
-
-				Sleep(5);
-				g_ItunesConnection->put_SoundVolume(--lVolume);
-			}
 		}
 
 		/* App is exiting */
 		if (g_ItunesConnection == nullptr && WAIT_OBJECT_0 != WaitForSingleObject( g_hITunesClosingEvent, 1 ))
 		{
 			/* Cleanup connection object */
+			SafeRelease(&g_ItunesConnection);
 			delete Object;
+
+			TerminateThread(hThread, 0);
+			CloseHandle(hThread);
+
 			ExitThread( 0 );
 		}
-
-		/* Clear the iTunes connection */
+		
+		//
+		// Release the iTunes connection
+		//
 		SafeRelease( &g_ItunesConnection );
 		delete Object;
 
@@ -151,11 +177,12 @@ DWORD WINAPI iTunesHandlerThread( LPVOID Parameter )
 		UpdateDiscordStatus( NULL );
 
 		/* iTunes.exe may take some time to close -- wait for close before continue */
-		while (iTunesProcessFound())
+		while (FindProcessByExeName(ITUNES_EXE_NAME))
 		{
 			Sleep( 0 );
 		}
 
+		ResetEvent(g_hITunesConnected);
 		ResetEvent( g_hITunesClosingEvent );
 	}
 
@@ -169,38 +196,3 @@ VOID InvokeITunesEvent()
 	SetEvent(g_hInvokeEvent);
 }
 
-//--------------------------------------------------
-// Check if iTunes.exe Proecess Found
-BOOL iTunesProcessFound()
-{
-	HANDLE			Snapshot;
-	PROCESSENTRY32	EntryData;
-	BOOL			Result;
-
-	Result = FALSE;
-
-	Snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-	if (Snapshot != INVALID_HANDLE_VALUE)
-	{
-		EntryData.dwSize = sizeof(EntryData);
-
-		Result = Process32First(Snapshot, &EntryData);
-		if (Result)
-		{
-			Result = FALSE;
-
-			do
-			{
-				if (0 == _wcsicmp(EntryData.szExeFile, ITUNES_EXE_NAME))
-				{
-					Result = TRUE;
-					break;
-				}
-			} while (Process32Next(Snapshot, &EntryData));
-		}
-
-		CloseHandle(Snapshot);
-	}
-
-	return Result;
-}

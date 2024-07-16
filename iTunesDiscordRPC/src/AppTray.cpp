@@ -157,7 +157,7 @@ LRESULT TrayIconProcedure(HWND hWnd, UINT uMsg, WPARAM wParm, LPARAM lParam)
 		g_IconData.uVersion			= NOTIFYICON_VERSION_4;
 		g_IconData.uCallbackMessage	= TRAY_ICON_CALLBACK;
 		g_IconData.dwInfoFlags		= NIIF_INFO;
-		g_IconData.hIcon			= g_AppWnd->GetIcon(TRUE);
+		g_IconData.hIcon			= g_AppWnd->GetIcon(FALSE);
 		StringCbCopy(g_IconData.szTip,
 			ARRAYSIZE(g_IconData.szTip),
 			TRAY_HOVER_MSG
