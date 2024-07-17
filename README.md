@@ -10,7 +10,7 @@ __By default, song album cover images are NOT displayed in the Discord RPC statu
 Read the 'iTunesDiscordRPC with Album Cover Images' section.__
 
 ## Installation:
-__If you don't care about album cover images being shown in the RPC status, you can download the release and just run the exe: https://github.com/Outfled/iTunesDiscordRPC/releases__
+__If you don't care about album cover images being shown in the RPC status, you can download a release and just run the exe: https://github.com/Outfled/iTunesDiscordRPC/releases__
 
 ### iTunesDiscordRPC with Album Cover Images
 ## Requirements
