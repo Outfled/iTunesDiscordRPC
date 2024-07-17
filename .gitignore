@@ -364,3 +364,4 @@ FodyWeavers.xsd
 /iTunesDiscordRPC/include/Discord/RPC2.h
 /iTunesDiscordRPC/include/Discord/Register2.h
 /Build/iTunesDiscordRPC.exe
+/Build/discord-rpc.dll
