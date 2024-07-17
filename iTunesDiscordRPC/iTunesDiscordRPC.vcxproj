@@ -213,7 +213,8 @@
       <Command>copy /Y "$(ProjectDir)include\targetver.h" "$(ProjectDir)targetver.h"</Command>
     </PreBuildEvent>
     <PostBuildEvent>
-      <Command>del "$(ProjectDir)targetver.h"</Command>
+      <Command>del "$(ProjectDir)targetver.h"
+copy "$(ProjectDir)bin\discord-rpc.dll" "$(OutputPath)discord-rpc.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
